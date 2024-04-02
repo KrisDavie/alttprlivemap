@@ -102,6 +102,8 @@ export const sniApiSlice = createApi({
         let memResponse = await controlMem.multiRead({
           uri: connectedDevice,
           requests: [
+            
+            
             {
               requestMemoryMapping: MemoryMapping.LoROM,
               requestAddress: 0xf50010,
@@ -120,10 +122,19 @@ export const sniApiSlice = createApi({
               requestAddressSpace: AddressSpace.FxPakPro,
               size: 1,
             },
+            {
+              requestMemoryMapping: MemoryMapping.LoROM,
+              requestAddress: 0x180213,
+              requestAddressSpace: AddressSpace.FxPakPro,
+              size: 1,
+            },
           ],
         })
         if (!memResponse.response) {
           return { error: "Error reading memory, no reposonse" }
+        }
+        if (memResponse.response.responses[3].data[0] === 0x01) {
+          return { error: "Race mode, not polling", errorCode: 1 }
         }
         let module = memResponse.response.responses[0].data[0]
         let coords = memResponse.response.responses[1]

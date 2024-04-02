@@ -14,7 +14,7 @@ import { setZoomLevel } from "./features/map/mapSlice";
 function App() {
 
   const [msToCount, setMsToCount] = useState(500)
-  useReadMemoryQuery(
+  const memReply = useReadMemoryQuery(
     { memLoc: 0xF50020, size: 4 },
     { pollingInterval: msToCount },
   )
@@ -40,46 +40,50 @@ function App() {
     setShowSomariaPits(!showSomariaPits);
   }
 
+  const race = memReply.error
+
+  const mapContent = race ? (<div className="text-red-700 text-4xl font-bold mt-32">ERROR: Race rom detected</div>) : (<TransformWrapper
+    initialScale={initialScale}
+    initialPositionX={
+      (-curImageSize.width * initialScale) / 2 +
+      windowSize.current.width / 2 -
+      292
+    }
+    initialPositionY={
+      (-curImageSize.height * initialScale) / 2 +
+      windowSize.current.height / 2
+    }
+    minScale={0.1}
+    wheel={{ step: 0.05 }}
+    ref={transformComponentRef}
+    onZoom={(zoom) => {
+      dispatch(setZoomLevel(zoom.state.scale))
+    }}
+    limitToBounds={false}
+  >
+    {({ zoomToElement, resetTransform }) => (
+      <div>
+        <TransformComponent
+          wrapperStyle={{
+            maxWidth: "100%",
+            maxHeight: "calc(100vh - 1px)",
+            backgroundColor: "#322d38",
+          }}
+        >
+          <MapContent
+            zoomToElement={zoomToElement}
+          />
+        </TransformComponent>
+      </div>
+    )}
+  </TransformWrapper>)
 
   
   return (
     <div className="flex flex-col items-center">
       <Header setShowSomariaPits={handleSomariaPits}/>
-      <TransformWrapper
-        initialScale={initialScale}
-        initialPositionX={
-          (-curImageSize.width * initialScale) / 2 +
-          windowSize.current.width / 2 -
-          292
-        }
-        initialPositionY={
-          (-curImageSize.height * initialScale) / 2 +
-          windowSize.current.height / 2
-        }
-        minScale={0.1}
-        wheel={{ step: 0.05 }}
-        ref={transformComponentRef}
-        onZoom={(zoom) => {
-          dispatch(setZoomLevel(zoom.state.scale))
-        }}
-        limitToBounds={false}
-      >
-        {({ zoomToElement, resetTransform }) => (
-          <div>
-            <TransformComponent
-              wrapperStyle={{
-                maxWidth: "100%",
-                maxHeight: "calc(100vh - 1px)",
-                backgroundColor: "#322d38",
-              }}
-            >
-              <MapContent
-                zoomToElement={zoomToElement}
-              />
-            </TransformComponent>
-          </div>
-        )}
-      </TransformWrapper>
+      {mapContent}
+      
     </div>
   )
 }
