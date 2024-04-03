@@ -3,12 +3,11 @@ import { createApi, fakeBaseQuery } from "@reduxjs/toolkit/query/react"
 import { GrpcWebFetchTransport } from "@protobuf-ts/grpcweb-transport"
 import {
   setConnectedDevice,
-  setCurRead,
   setDeviceList,
   setGrpcConnected,
-  setLastRead,
+  setRaceOverride,
 } from "./sniSlice"
-import { resetHistory, setCurCoords, setCurMap } from "../map/mapSlice"
+import { setCurCoords, setCurMap } from "../map/mapSlice"
 import {
   DevicesClient,
   DeviceControlClient,
@@ -23,6 +22,7 @@ const getTransport = (state: any) => {
 }
 
 const ingame_modes = [0x07, 0x09, 0x0b]
+const completed_modes = [0x19, 0x1a]
 
 type SRAMLocs = {
   [key: number]: [string, number]
@@ -133,9 +133,6 @@ export const sniApiSlice = createApi({
         if (!memResponse.response) {
           return { error: "Error reading memory, no reposonse" }
         }
-        if (memResponse.response.responses[3].data[0] === 0x01) {
-          return { error: "Race mode, not polling", errorCode: 1 }
-        }
         let module = memResponse.response.responses[0].data[0]
         let coords = memResponse.response.responses[1]
         let world = memResponse.response.responses[2].data[0]
@@ -146,30 +143,35 @@ export const sniApiSlice = createApi({
           new Uint8Array([coords.data[2], coords.data[3]]).buffer,
         )[0]
 
+        let curMap = state.maps.curMap
+        if (!state.sni.raceOverride && completed_modes.includes(module)) {
+          queryApi.dispatch(setRaceOverride(true))
+        }
         if (ingame_modes.includes(module)) {
           if (module === 0x07 && y <= 8192 && state.maps.curMap !== "EG1") {
             queryApi.dispatch(setCurMap("EG1"))
-            queryApi.dispatch(resetHistory())
+            curMap = "EG1"
           }
           if (module === 0x07 && y > 8192) {
             y -= 8192
             if (state.maps.curMap !== "EG2") {
               queryApi.dispatch(setCurMap("EG2"))
-              queryApi.dispatch(resetHistory())
+              curMap = "EG2"
             }
           }
           if (module === 0x09 && world === 0x01 && state.maps.curMap !== "DW") {
             queryApi.dispatch(setCurMap("DW"))
-            queryApi.dispatch(resetHistory())
+            curMap = "DW"
           }
           if (module === 0x09 && world === 0x00 && state.maps.curMap !== "LW") {
             queryApi.dispatch(setCurMap("LW"))
-            queryApi.dispatch(resetHistory())
+            curMap = "LW"
           }
+          queryApi.dispatch(setCurCoords([x, y, curMap]))
+        }
 
-          console.log(module, x, y, world)
-
-          queryApi.dispatch(setCurCoords([x, y]))
+        if (!state.sni.raceOverride && memResponse.response.responses[3].data[0] === 0x01) {
+          return { error: "Race mode, not polling", errorCode: 1 }
         }
 
         return { data: module }

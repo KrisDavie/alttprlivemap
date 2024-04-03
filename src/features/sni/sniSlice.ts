@@ -6,11 +6,13 @@ export interface SniSliceState {
   grpcPort: number
   grpcConnected: boolean
   deviceList: string[]
+  raceOverride?: boolean
   connectedDevice?: string
   curRead?: number
   curTimestamp?: number
   lastRead?: number
   lastTimestamp?: number
+  pollInterval?: number
 }
 
 const initialState: SniSliceState = {
@@ -18,11 +20,13 @@ const initialState: SniSliceState = {
   grpcPort: 8190,
   grpcConnected: false,
   deviceList: [],
+  raceOverride: false,
   connectedDevice: undefined,
   curRead: undefined,
   curTimestamp: undefined,
   lastRead: undefined,
   lastTimestamp: undefined,
+  pollInterval: 500,
 }
 
 export const sniSlice = createSlice({
@@ -51,6 +55,12 @@ export const sniSlice = createSlice({
     setCurRead: (state, action: PayloadAction<[number, number]>) => {
       state.curRead = action.payload[0]
       state.curTimestamp = action.payload[1]
+    },
+    setPollInterval: (state, action: PayloadAction<number>) => {
+      state.pollInterval = action.payload
+    },
+    setRaceOverride: (state, action: PayloadAction<boolean>) => {
+      state.raceOverride = action.payload
     }
   }
 })
@@ -65,6 +75,8 @@ export const {
   setLastRead,
   setCurRead,
   setDeviceList,
+  setPollInterval,
+  setRaceOverride,
   setConnectedDevice,
 } = sniSlice.actions
 export default sniSlice.reducer 

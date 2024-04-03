@@ -5,6 +5,7 @@ export interface MapSliceState {
   followPlayer: boolean
   curCoords: [number, number]
   coordsHistory: [number, number][]
+  mapHistory: string[]
   historyLenToShow: number
   curMap: string
   zoomLevel: number
@@ -14,6 +15,7 @@ const initialState: MapSliceState = {
   somariaPits: false,
   followPlayer: true,
   curCoords: [0, 0],
+  mapHistory: [],
   coordsHistory: [],
   historyLenToShow: 10,
   curMap: "EG1",
@@ -30,18 +32,16 @@ export const mapSlice = createSlice({
     toggleFollowPlayer: (state) => {
       state.followPlayer = !state.followPlayer
     },
-    setCurCoords: (state, action: PayloadAction<[number, number]>) => {
-      state.curCoords = action.payload
-      state.coordsHistory.push(action.payload)
+    setCurCoords: (state, action: PayloadAction<[number, number, string]>) => {
+      state.curCoords = [action.payload[0], action.payload[1]]
+      state.coordsHistory.push([action.payload[0], action.payload[1]])
+      state.mapHistory.push(action.payload[2])
     },
     setHistoryLenToShow: (state, action: PayloadAction<number>) => {
       state.historyLenToShow = action.payload
     },
     setCurMap: (state, action: PayloadAction<string>) => {
       state.curMap = action.payload
-    },
-    resetHistory: (state) => {
-      state.coordsHistory = []
     },
     setZoomLevel: (state, action: PayloadAction<number>) => {
       state.zoomLevel = action.payload
@@ -64,7 +64,6 @@ export const {
   setCurCoords,
   setHistoryLenToShow,
   setCurMap,
-  resetHistory,
   setZoomLevel,
 } = mapSlice.actions
 

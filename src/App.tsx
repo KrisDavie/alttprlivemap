@@ -8,15 +8,20 @@ import {
 } from "react-zoom-pan-pinch";
 import MapContent from "./features/map/MapContent";
 import { useReadMemoryQuery } from "./features/sni/sniApiSlice";
-import { useAppDispatch } from "./app/hooks";
+import { setRaceOverride } from "./features/sni/sniSlice";
+import { useAppDispatch, useAppSelector } from "./app/hooks";
 import { setZoomLevel } from "./features/map/mapSlice";
+import { Checkbox } from "./components/ui/checkbox";
+import { Button } from "./components/ui/button";
 
 function App() {
 
-  const [msToCount, setMsToCount] = useState(500)
+  const pollingInterval = useAppSelector((state) => state.sni.pollInterval)
+  const [overrideAcknowlegde, setOverrideAcknowlegde] = useState(false)
+
   const memReply = useReadMemoryQuery(
     { memLoc: 0xF50020, size: 4 },
-    { pollingInterval: msToCount },
+    { pollingInterval: pollingInterval },
   )
 
   const transformComponentRef = useRef<ReactZoomPanPinchRef | null>(null);
@@ -36,13 +41,32 @@ function App() {
   };
   const [showSomariaPits, setShowSomariaPits] = useState(false);
 
+  const raceOverride = useAppSelector((state) => state.sni.raceOverride)
+
   const handleSomariaPits = () => {
     setShowSomariaPits(!showSomariaPits);
   }
 
-  const race = memReply.error
+  const handleRaceOverride = () => {
+    dispatch(setRaceOverride(true))
+  }
 
-  const mapContent = race ? (<div className="text-red-700 text-4xl font-bold mt-32">ERROR: Race rom detected</div>) : (<TransformWrapper
+  const race = memReply.error && !raceOverride
+
+  const mapContent = race ? (
+    <div className="flex flex-col w-4/6 items-center">
+      <div className="flex text-red-700 text-2xl font-bold mt-32 w-5/6 text-center">ERROR: Race rom detected!<br/><br/>Data will be logged but the map will not be shown until you beat the game or trigger the override.</div>
+      <div className="mt-4 mb-4">
+      <Checkbox
+        id='raceOverride'
+        checked={overrideAcknowlegde}
+        onClick={() => setOverrideAcknowlegde(!overrideAcknowlegde)}/>
+      <label className="ml-3" htmlFor='raceOverride'>I understand that using this in a race is against the rules and that I would be cheating if I did so.</label>
+      </div>
+      <Button className="w-36" disabled={!overrideAcknowlegde} onClick={() => handleRaceOverride()}>Override</Button>
+  </div>
+  
+  ) : (<TransformWrapper
     initialScale={initialScale}
     initialPositionX={
       (-curImageSize.width * initialScale) / 2 +

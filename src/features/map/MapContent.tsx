@@ -6,7 +6,7 @@ import { stat } from "fs";
 
 
 interface MapContentProps {
-  zoomToElement: (element: string, scale?: number) => void;
+  zoomToElement: (element: string, scale?: number, transitionTime?: number) => void;
 }
 
 function MapContent(props: MapContentProps) {
@@ -16,15 +16,38 @@ function MapContent(props: MapContentProps) {
 
   const showSomariaPits = useAppSelector(state => state.maps.somariaPits);
   const curCoords = useAppSelector(state => state.maps.curCoords);
-  const coordsHistory = useAppSelector(state => state.maps.coordsHistory.slice(-state.maps.historyLenToShow))
+  let coordsHistory = useAppSelector(state => state.maps.coordsHistory.slice(-state.maps.historyLenToShow))
+  const mapHistory = useAppSelector(state => state.maps.mapHistory.slice(-state.maps.historyLenToShow));
   const followPlayer = useAppSelector(state => state.maps.followPlayer);
   const zoomLevel = useAppSelector(state => state.maps.zoomLevel);
+  const pollingInterval = useAppSelector((state) => state.sni.pollInterval)
+
 
   if (followPlayer && curCoords) {
-    zoomToElement("playerDot", zoomLevel)
+    zoomToElement("playerDot", zoomLevel, pollingInterval)
   }
 
   const selectedMap = useAppSelector(state => state.maps.curMap);
+  let coordsSets: [number,number][][] = [];
+
+  let currentSet = [];
+  for (let i = 0; i < coordsHistory.length; i++) {
+    if (mapHistory[i] === selectedMap) {
+      currentSet.push(coordsHistory[i]);
+    } else {
+      if (currentSet.length > 0) {
+        coordsSets.push(currentSet);
+        currentSet = [];
+      }
+    }
+  }
+  if (currentSet.length > 0) {
+    coordsSets.push(currentSet);
+  }
+
+  console.log(coordsSets)
+  
+
 
   const mapElements = [];
 
@@ -90,7 +113,7 @@ function MapContent(props: MapContentProps) {
             zIndex: 100,
           }}
         ></div>)}
-        {coordsHistory.length > 0 && (
+        {coordsSets.length > 0 && (
           <svg
             id="pathSvg"
             style={{
@@ -103,12 +126,13 @@ function MapContent(props: MapContentProps) {
               zIndex: 99,
             }}
           >
-            {coordsHistory.map((coords, index) => {
-              if (index === coordsHistory.length - 1) return null; // Skip the last coordinate
+            {coordsSets.map((historySet) =>  
+              historySet.map((coords, index) => {
+              if (index === historySet.length - 1) return null; // Skip the last coordinate
               const startX = selectedMap.startsWith("EG") ? coords[0] : coords[0] * 2;
               const startY = selectedMap.startsWith("EG") ? coords[1] : coords[1] * 2;
-              const endX = selectedMap.startsWith("EG") ? coordsHistory[index + 1][0] : coordsHistory[index + 1][0] * 2;
-              const endY = selectedMap.startsWith("EG") ? coordsHistory[index + 1][1] : coordsHistory[index + 1][1] * 2;
+              const endX = selectedMap.startsWith("EG") ? historySet[index + 1][0] : historySet[index + 1][0] * 2;
+              const endY = selectedMap.startsWith("EG") ? historySet[index + 1][1] : historySet[index + 1][1] * 2;
               return (
                 <line
                   key={index}
@@ -120,7 +144,7 @@ function MapContent(props: MapContentProps) {
                   strokeWidth={3}
                 />
               );
-            })}
+            }))}
           </svg>
 
       )}
