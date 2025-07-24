@@ -45,10 +45,6 @@ function MapContent(props: MapContentProps) {
     coordsSets.push(currentSet);
   }
 
-  console.log(coordsSets)
-  
-
-
   const mapElements = [];
 
   let mapImage = "";

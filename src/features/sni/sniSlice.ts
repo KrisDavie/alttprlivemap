@@ -13,6 +13,11 @@ export interface SniSliceState {
   lastRead?: number
   lastTimestamp?: number
   pollInterval?: number
+  memoryMapping?: string
+  romName?: string
+  sa1Init?: boolean
+  useAltMemLocs?: boolean
+  prevSram?: Uint8Array
 }
 
 const initialState: SniSliceState = {
@@ -27,7 +32,13 @@ const initialState: SniSliceState = {
   lastRead: undefined,
   lastTimestamp: undefined,
   pollInterval: 500,
+  memoryMapping: undefined,
+  romName: undefined,
+  sa1Init: false,
+  useAltMemLocs: false,
+  prevSram: undefined
 }
+
 
 export const sniSlice = createSlice({
   name: "sni",
@@ -61,6 +72,27 @@ export const sniSlice = createSlice({
     },
     setRaceOverride: (state, action: PayloadAction<boolean>) => {
       state.raceOverride = action.payload
+    },
+    setMemoryMapping: (state, action: PayloadAction<string>) => {
+      state.memoryMapping = action.payload
+    },
+    setRomName: (state, action: PayloadAction<string>) => {
+      state.romName = action.payload
+    },
+    setSa1Init: (state, action: PayloadAction<boolean>) => {
+      state.sa1Init = action.payload
+    },
+    setUseAltMemLocs: (state, action: PayloadAction<boolean>) => {
+      state.useAltMemLocs = action.payload
+    },
+    setPrevSram: (state, action: PayloadAction<Uint8Array>) => {
+      state.prevSram = action.payload
+    },
+    romChange(state, action: PayloadAction<string>) {
+      state.romName = action.payload
+      state.sa1Init = false
+      state.memoryMapping = undefined
+      state.useAltMemLocs = false
     }
   }
 })
@@ -78,6 +110,12 @@ export const {
   setPollInterval,
   setRaceOverride,
   setConnectedDevice,
+  setMemoryMapping,
+  setRomName,
+  setSa1Init,
+  setPrevSram,
+  setUseAltMemLocs,
+  romChange
 } = sniSlice.actions
 export default sniSlice.reducer 
 

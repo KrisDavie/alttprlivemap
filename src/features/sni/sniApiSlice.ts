@@ -2,9 +2,11 @@ import type { RootState } from "@/app/store"
 import { createApi, fakeBaseQuery } from "@reduxjs/toolkit/query/react"
 import { GrpcWebFetchTransport } from "@protobuf-ts/grpcweb-transport"
 import {
+  romChange,
   setConnectedDevice,
   setDeviceList,
   setGrpcConnected,
+  setMemoryMapping,
   setRaceOverride,
 } from "./sniSlice"
 import { setCurCoords, setCurMap } from "../map/mapSlice"
@@ -26,6 +28,11 @@ const completed_modes = [0x19, 0x1a]
 
 type SRAMLocs = {
   [key: number]: [string, number]
+}
+
+const memMaps: { [x: string]: MemoryMapping } = {
+  'lorom': MemoryMapping.LoROM,
+  'sa1': MemoryMapping.SA1,
 }
 
 const sram_locs: SRAMLocs = {
@@ -99,43 +106,128 @@ export const sniApiSlice = createApi({
         if (!connectedDevice) {
           return { error: "No device selected" }
         }
-        let memResponse = await controlMem.multiRead({
+
+        // Detect memory mapping
+        if (!state.sni.memoryMapping) {
+          let memMapResponse = await controlMem.mappingDetect({
+            uri: connectedDevice,
+          })
+          if (!memMapResponse.response) {
+            return { error: "Error detecting memory mapping" }
+          }
+          var memMap = memMapResponse.response.memoryMapping
+          switch (memMapResponse.response.memoryMapping) {
+            case MemoryMapping.LoROM:
+              queryApi.dispatch(setMemoryMapping("lorom"))
+              break
+            case MemoryMapping.SA1:
+              queryApi.dispatch(setMemoryMapping("sa1"))
+              // Auto override on Practice hack
+              queryApi.dispatch(setRaceOverride(true))
+              break
+            default:
+              return { error: "Unsupported memory mapping" }
+          }
+        } else {
+          var memMap = memMaps[state.sni.memoryMapping]
+        }
+
+        // Read rom name
+        let romNameResponse = await controlMem.singleRead({
           uri: connectedDevice,
-          requests: [
-            
-            
-            {
-              requestMemoryMapping: MemoryMapping.LoROM,
-              requestAddress: 0xf50010,
-              requestAddressSpace: AddressSpace.FxPakPro,
-              size: 1,
-            },
-            {
-              requestMemoryMapping: MemoryMapping.LoROM,
-              requestAddress: 0xf50020,
-              requestAddressSpace: AddressSpace.FxPakPro,
-              size: 4,
-            },
-            {
-              requestMemoryMapping: MemoryMapping.LoROM,
-              requestAddress: 0xf50fff,
-              requestAddressSpace: AddressSpace.FxPakPro,
-              size: 1,
-            },
-            {
-              requestMemoryMapping: MemoryMapping.LoROM,
-              requestAddress: 0x180213,
-              requestAddressSpace: AddressSpace.FxPakPro,
-              size: 1,
-            },
-          ],
+          request: { 
+            requestMemoryMapping: memMap,
+            requestAddress: 0x7FC0,
+            requestAddressSpace: AddressSpace.FxPakPro,
+            size: 0x15}
         })
+
+        if (!romNameResponse.response.response) {
+          return { error: "Error reading rom name" }
+        }
+
+        let romName = Array.from(romNameResponse.response.response.data).map(byte => String.fromCharCode(byte)).join("")
+
+        if (romName !== state.sni.romName) {
+          queryApi.dispatch(romChange(romName))
+        }
+        let memResponse
+        if (state.sni.memoryMapping === 'lorom') {
+          memResponse = await controlMem.multiRead({
+            uri: connectedDevice,
+            requests: 
+            [
+              {
+                requestMemoryMapping: memMap,
+                requestAddress: 0xF50010,
+                requestAddressSpace: AddressSpace.FxPakPro,
+                size: 1,
+              },
+              {
+                requestMemoryMapping: memMap,
+                requestAddress: 0xF50020,
+                requestAddressSpace: AddressSpace.FxPakPro,
+                size: 4,
+              },
+              {
+                requestMemoryMapping: memMap,
+                requestAddress: 0xF50fff,
+                requestAddressSpace: AddressSpace.FxPakPro,
+                size: 1,
+              },
+              {
+                requestMemoryMapping: memMap,
+                requestAddress: 0x180213,
+                requestAddressSpace: AddressSpace.FxPakPro,
+                size: 1,
+              },
+            ]
+          })
+        } else {
+          memResponse = await controlMem.multiRead({
+            uri: connectedDevice,
+            requests: 
+            [
+              {
+                requestMemoryMapping: memMap,
+                requestAddress: 0xE07C00,
+                requestAddressSpace: AddressSpace.FxPakPro,
+                size: 0x4,
+              },
+              {
+                requestMemoryMapping: memMap,
+                requestAddress: 0xE07C04,
+                requestAddressSpace: AddressSpace.FxPakPro,
+                size: 1,
+              },
+              {
+                requestMemoryMapping: memMap,
+                requestAddress: 0xE07C06,
+                requestAddressSpace: AddressSpace.FxPakPro,
+                size: 1,
+              },
+            ]
+          })
+        }
+
         if (!memResponse.response) {
           return { error: "Error reading memory, no reposonse" }
         }
-        let module = memResponse.response.responses[0].data[0]
-        let coords = memResponse.response.responses[1]
-        let world = memResponse.response.responses[2].data[0]
+
+        let module
+        let coords
+        let world 
+
+        if (state.sni.memoryMapping === 'lorom') {
+          module = memResponse.response.responses[0].data[0]
+          coords = memResponse.response.responses[1]
+          world = memResponse.response.responses[2].data[0]
+        } else {
+          module = memResponse.response.responses[1].data[0]
+          coords = memResponse.response.responses[0]
+          world = memResponse.response.responses[2].data[0]
+        }
+
         var y = new Uint16Array(
           new Uint8Array([coords.data[0], coords.data[1]]).buffer,
         )[0]
@@ -170,7 +262,7 @@ export const sniApiSlice = createApi({
           queryApi.dispatch(setCurCoords([x, y, curMap]))
         }
 
-        if (!state.sni.raceOverride && memResponse.response.responses[3].data[0] === 0x01) {
+        if (state.sni.memoryMapping === 'lorom' && !state.sni.raceOverride && memResponse.response.responses[3].data[0] === 0x01) {
           return { error: "Race mode, not polling", errorCode: 1 }
         }
 
