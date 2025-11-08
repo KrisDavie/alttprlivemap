@@ -32,7 +32,6 @@ import {
 } from "@/components/ui/select"
 
 import { useAppDispatch } from "@/app/hooks"
-import { on } from "events"
 
 function SniSettings() {
   const dispatch = useAppDispatch()
@@ -88,10 +87,6 @@ function SniSettings() {
     // dispatch(connect())
   }
 
-  const handleReset = (event: React.MouseEvent) => {
-    // dispatch(reset())
-  }
-
   useEffect(() => {
     if (devices.length > 0) {
       deviceForm.setValue("device", devices[0])
@@ -100,11 +95,6 @@ function SniSettings() {
 
   return (
     <div className="flex flex-col w-auto">
-      <div className="flex flex-row">
-        <Button className="mx-1" onClick={handleReset}>
-          Reset Console
-        </Button>
-      </div>
       <div className="flex flex-col">
         <Form {...gprcForm}>
           <form

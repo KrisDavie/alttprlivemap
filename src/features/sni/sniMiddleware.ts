@@ -35,10 +35,6 @@ export const sniMiddleware: Middleware<{}, RootState> =
         api.dispatch(setDeviceList(devices))
         api.dispatch(setConnectedDevice(devices[0]))
         break
-      case "sni/reset":
-        let controlClient = new DeviceControlClient(transport)
-        originalState.sni.connectedDevice && await controlClient.resetSystem({ uri: originalState.sni.connectedDevice })
-        break
     }
     return result
   }

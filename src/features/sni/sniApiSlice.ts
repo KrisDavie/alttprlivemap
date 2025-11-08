@@ -9,13 +9,13 @@ import {
   setMemoryMapping,
   setRaceOverride,
 } from "./sniSlice"
-import { setCurCoords, setCurMap } from "../map/mapSlice"
+import { setCurCoords, setCurMap, setAllData } from "../map/mapSlice"
 import {
   DevicesClient,
   DeviceControlClient,
   DeviceMemoryClient,
 } from "@/sni/sni.client"
-import { AddressSpace, MemoryMapping } from "@/sni/sni"
+import { AddressSpace, MemoryMapping, MultiReadMemoryRequest, MultiReadMemoryResponse } from "@/sni/sni"
 
 const getTransport = (state: any) => {
   return new GrpcWebFetchTransport({
@@ -26,8 +26,12 @@ const getTransport = (state: any) => {
 const ingame_modes = [0x07, 0x09, 0x0b]
 const completed_modes = [0x19, 0x1a]
 
-type SRAMLocs = {
-  [key: number]: [string, number]
+type MemLocs = {
+  // name: [[mem_loc, size], [mem_loc, size]]
+  [key: string]: {
+    'prachack': [number, number],
+    'rando': [number, number],
+  }
 }
 
 const memMaps: { [x: string]: MemoryMapping } = {
@@ -35,18 +39,48 @@ const memMaps: { [x: string]: MemoryMapping } = {
   'sa1': MemoryMapping.SA1,
 }
 
-const sram_locs: SRAMLocs = {
-  0xf50010: ["game_mode", 0x1],
-  0xe02000: ["rom_name", 0x15],
-  0xf5f000: ["base", 0x256],
-  0xf5f280: ["overworld", 0x82],
-  0xf5f340: ["inventory", 0x1bd],
-  0xf5f3c6: ["misc", 0x4],
-  0xf5f410: ["npcs", 0x2],
-  0xf5f4d0: ["multiinfo", 0x4],
-  0xf66018: ["pots", 0x250],
-  0xf66268: ["sprites", 0x250],
-  0xf664b8: ["shops", 0x29],
+const memLocs: MemLocs = {
+  'module': {
+    'prachack': [0xE07C04, 0x1],
+    'rando': [0xF50010, 0x1],
+  },
+  'coords': {
+    'prachack': [0xE07C00, 0x4],
+    'rando': [0xF50020, 0x4],
+  },
+  'world': {
+    'prachack': [0xE07C06, 0x1],
+    'rando': [0xF50FFF, 0x1],
+  },
+  'race_mode': {
+    'prachack': [0x0, 0x0],
+    'rando': [0x180213, 0x1],
+  },
+  'transition_bound_set': {
+    'prachack': [0xF500A6, 0x2],
+    'rando': [0xF500A6, 0x2],
+  },
+  'transition_bounds': {
+    'prachack': [0xF50600, 0x20],
+    'rando': [0xF50600, 0x20],
+  },
+  'camera_pos_ow': {
+    'prachack': [0xF50618, 0x8],
+    'rando': [0xF50618, 0x8],
+  },
+  'camera_pos_uw': {
+    'prachack': [0xF500E0, 0x8],
+    'rando': [0xF500E0, 0x8],
+  },
+  'sprite_ids': {
+    'prachack': [0xF50E20, 0x10],
+    'rando': [0xF50E20, 0x10],
+  },
+  'sprite_coords': {
+    'prachack': [0xF50D00, 0x40],
+    'rando': [0xF50D00, 0x40],
+  },
+
 }
 
 export const sniApiSlice = createApi({
@@ -78,23 +112,9 @@ export const sniApiSlice = createApi({
         }
       },
     }),
-    reset: builder.mutation({
-      async queryFn(arg, queryApi, extraOptions, baseQuery) {
-        const state = queryApi.getState() as RootState
-        const transport = getTransport(state)
-        let controlClient = new DeviceControlClient(transport)
-        let connectedDevice = state.sni.connectedDevice
-        if (connectedDevice) {
-          const res = await controlClient.resetSystem({ uri: connectedDevice })
-          return { data: res }
-        } else {
-          return { error: "No device selected" }
-        }
-      },
-    }),
     readMemory: builder.query({
       async queryFn(
-        arg: { memLoc: number; size: number },
+        arg: {},
         queryApi,
         extraOptions,
         baseQuery,
@@ -151,89 +171,54 @@ export const sniApiSlice = createApi({
         if (romName !== state.sni.romName) {
           queryApi.dispatch(romChange(romName))
         }
-        let memResponse
-        if (state.sni.memoryMapping === 'lorom') {
-          memResponse = await controlMem.multiRead({
-            uri: connectedDevice,
-            requests: 
-            [
-              {
-                requestMemoryMapping: memMap,
-                requestAddress: 0xF50010,
-                requestAddressSpace: AddressSpace.FxPakPro,
-                size: 1,
-              },
-              {
-                requestMemoryMapping: memMap,
-                requestAddress: 0xF50020,
-                requestAddressSpace: AddressSpace.FxPakPro,
-                size: 4,
-              },
-              {
-                requestMemoryMapping: memMap,
-                requestAddress: 0xF50fff,
-                requestAddressSpace: AddressSpace.FxPakPro,
-                size: 1,
-              },
-              {
-                requestMemoryMapping: memMap,
-                requestAddress: 0x180213,
-                requestAddressSpace: AddressSpace.FxPakPro,
-                size: 1,
-              },
-            ]
-          })
-        } else {
-          memResponse = await controlMem.multiRead({
-            uri: connectedDevice,
-            requests: 
-            [
-              {
-                requestMemoryMapping: memMap,
-                requestAddress: 0xE07C00,
-                requestAddressSpace: AddressSpace.FxPakPro,
-                size: 0x4,
-              },
-              {
-                requestMemoryMapping: memMap,
-                requestAddress: 0xE07C04,
-                requestAddressSpace: AddressSpace.FxPakPro,
-                size: 1,
-              },
-              {
-                requestMemoryMapping: memMap,
-                requestAddress: 0xE07C06,
-                requestAddressSpace: AddressSpace.FxPakPro,
-                size: 1,
-              },
-            ]
-          })
+        // Build multi-read based on memory mapping
+        const mread_data = {
+          uri: connectedDevice,
+          requests: [] as any[],
         }
 
+        Object.keys(memLocs).forEach((key) => {
+          const [addr, size] = memLocs[key][state.sni.romtype as 'prachack' | 'rando']
+          if (size === 0) {
+            return
+          }
+          mread_data.requests.push({
+            requestMemoryMapping: memMap,
+            requestAddress: addr,
+            requestAddressSpace: AddressSpace.FxPakPro,
+            size: size,
+          })
+        })
+
+        let memResponse = await controlMem.multiRead({
+            uri: connectedDevice,
+            requests: mread_data.requests
+        })
+        
         if (!memResponse.response) {
           return { error: "Error reading memory, no reposonse" }
         }
 
-        let module
-        let coords
-        let world 
+        let data: { [key: string]: Uint8Array } = {}
 
-        if (state.sni.memoryMapping === 'lorom') {
-          module = memResponse.response.responses[0].data[0]
-          coords = memResponse.response.responses[1]
-          world = memResponse.response.responses[2].data[0]
-        } else {
-          module = memResponse.response.responses[1].data[0]
-          coords = memResponse.response.responses[0]
-          world = memResponse.response.responses[2].data[0]
-        }
+        let ix = 0
+        Object.keys(memLocs).forEach((key, index) => {
+          const [addr, size] = memLocs[key][state.sni.romtype as 'prachack' | 'rando']
+          if (size === 0) {
+            return
+          }
+          data[key] = memResponse.response.responses[ix++].data
+        })
 
         var y = new Uint16Array(
-          new Uint8Array([coords.data[0], coords.data[1]]).buffer,
+          new Uint8Array([data['coords'][0], data['coords'][1]]).buffer,
         )[0]
         const x = new Uint16Array(
-          new Uint8Array([coords.data[2], coords.data[3]]).buffer,
+          new Uint8Array([data['coords'][2], data['coords'][3]]).buffer,
         )[0]
+
+        const module = data['module'][0]
+        const world = data['world'][0]
 
         let curMap = state.maps.curMap
         if (!state.sni.raceOverride && completed_modes.includes(module)) {
@@ -265,6 +250,7 @@ export const sniApiSlice = createApi({
         if (state.sni.memoryMapping === 'lorom' && !state.sni.raceOverride && memResponse.response.responses[3].data[0] === 0x01) {
           return { error: "Race mode, not polling", errorCode: 1 }
         }
+        queryApi.dispatch(setAllData(data))
 
         return { data: module }
       },
@@ -275,6 +261,5 @@ export const sniApiSlice = createApi({
 export const {
   useGetDevicesQuery,
   useLazyGetDevicesQuery,
-  useResetMutation,
   useReadMemoryQuery,
 } = sniApiSlice

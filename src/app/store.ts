@@ -1,12 +1,10 @@
 import { configureStore, ThunkAction, Action } from "@reduxjs/toolkit"
-import timerSlice from "../features/timer/timerSlice"
 import { sniApiSlice } from "@/features/sni/sniApiSlice"
 import sniSlice from "@/features/sni/sniSlice"
 import mapSlice from "@/features/map/mapSlice"
 
 export const store = configureStore({
   reducer: {
-    timer: timerSlice,
     sni: sniSlice,
     maps: mapSlice,
     [sniApiSlice.reducerPath]: sniApiSlice.reducer,

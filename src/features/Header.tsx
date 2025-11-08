@@ -15,6 +15,8 @@ import {
   setZoomLevel,
   toggleFollowPlayer,
   toggleSomariaPits,
+  toggleCameraInfo,
+  toggleDebugInfo
 } from "./map/mapSlice"
 import {
   Tooltip,
@@ -37,6 +39,8 @@ function Header(props: any) {
     (state) => state.sni.connectedDevice,
   )
   const somariaPits = useAppSelector((state) => state.maps.somariaPits)
+  const cameraInfo = useAppSelector((state) => state.maps.cameraInfo)
+  const debugInfo = useAppSelector((state) => state.maps.debugInfo)
   const followPlayer = useAppSelector((state) => state.maps.followPlayer)
   const historyLengthToShow = useAppSelector(
     (state) => state.maps.historyLenToShow,
@@ -51,6 +55,14 @@ function Header(props: any) {
 
   const handleSomariaPits = () => {
     dispatch(toggleSomariaPits())
+  }
+
+  const handleCameraInfo = () => {
+    dispatch(toggleCameraInfo())
+  }
+
+  const handleDebugInfo = () => {
+    dispatch(toggleDebugInfo())
   }
 
   const handleFollowPlayer = () => {
@@ -74,6 +86,32 @@ function Header(props: any) {
       <div className="flex absolute top-4 left-2 space-x-2 justify-between">
         <div className="flex items-center space-x-2">
           <Checkbox
+            onClick={handleCameraInfo}
+            checked={cameraInfo}
+            id="camera"
+          />
+          <Label
+            htmlFor="camera"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            Camera
+          </Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Checkbox
+            onClick={handleDebugInfo}
+            checked={debugInfo}
+            id="debug"
+          />
+          <Label
+            htmlFor="debug"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            Debug
+          </Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Checkbox
             onClick={handleSomariaPits}
             checked={somariaPits}
             id="somaria"
@@ -82,7 +120,7 @@ function Header(props: any) {
             htmlFor="somaria"
             className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
           >
-            Show Somaria Pits
+            Somaria Pits
           </Label>
         </div>
         <Separator orientation="vertical" className="flex h-4" />
@@ -137,7 +175,7 @@ function Header(props: any) {
         <Separator orientation="vertical" className="flex h-4" />
         <div className="flex items-center space-x-2 w-56">
           <Input
-          defaultValue={pollingInterval ?? 500}
+          defaultValue={pollingInterval ?? 100}
             onChange={handlePollingIntervalChange}
             className="w-24 h-4"
             id='pollingInterval'
