@@ -6,6 +6,7 @@ export interface SniSliceState {
   grpcPort: number
   grpcConnected: boolean
   deviceList: string[]
+  sa1ReadPossible: boolean
   romtype: string
   raceOverride?: boolean
   connectedDevice?: string
@@ -26,6 +27,7 @@ const initialState: SniSliceState = {
   grpcPort: 8190,
   grpcConnected: false,
   deviceList: [],
+  sa1ReadPossible: true,
   romtype: "rando",
   raceOverride: false,
   connectedDevice: undefined,
@@ -74,6 +76,9 @@ export const sniSlice = createSlice({
       } else {
         state.romtype = 'rando'
       }
+      if (state.connectedDevice?.split(":")[0] === "fxpakpro" && action.payload === "sa1") {
+        state.sa1ReadPossible = false
+      }
     },
     setRomName: (state, action: PayloadAction<string>) => {
       state.romName = action.payload
@@ -84,12 +89,16 @@ export const sniSlice = createSlice({
       state.memoryMapping = undefined
       state.useAltMemLocs = false
       state.romtype = "rando"
+      state.sa1ReadPossible = true
     }
   }
 })
 
 export const selectAvailableDevices = (state: { sni: SniSliceState }) =>
   state.sni.deviceList
+
+export const selectSA1ReadPossible = (state: { sni: SniSliceState }) =>
+  state.sni.sa1ReadPossible
 
 export const {
   setGrpcHost,

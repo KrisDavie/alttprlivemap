@@ -12,10 +12,9 @@ import {
 import { setCurCoords, setCurMap, setAllData } from "../map/mapSlice"
 import {
   DevicesClient,
-  DeviceControlClient,
   DeviceMemoryClient,
 } from "@/sni/sni.client"
-import { AddressSpace, MemoryMapping, MultiReadMemoryRequest, MultiReadMemoryResponse } from "@/sni/sni"
+import { AddressSpace, MemoryMapping } from "@/sni/sni"
 
 const getTransport = (state: any) => {
   return new GrpcWebFetchTransport({
@@ -177,8 +176,13 @@ export const sniApiSlice = createApi({
           requests: [] as any[],
         }
 
+        let romtype: 'prachack' | 'rando' = 'rando'
+        if (state.sni.romtype === 'prachack' && state.sni.connectedDevice?.split(':')[0] === 'fxpakpro') {
+          romtype = 'prachack'
+        }
+
         Object.keys(memLocs).forEach((key) => {
-          const [addr, size] = memLocs[key][state.sni.romtype as 'prachack' | 'rando']
+          const [addr, size] = memLocs[key][romtype]
           if (size === 0) {
             return
           }
@@ -203,7 +207,7 @@ export const sniApiSlice = createApi({
 
         let ix = 0
         Object.keys(memLocs).forEach((key, index) => {
-          const [addr, size] = memLocs[key][state.sni.romtype as 'prachack' | 'rando']
+          const [addr, size] = memLocs[key][romtype]
           if (size === 0) {
             return
           }

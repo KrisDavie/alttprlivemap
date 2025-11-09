@@ -8,7 +8,7 @@ import {
 import SniSettings from "./sni/sniSettings"
 import { AlertCircleIcon, CheckIcon, HomeIcon, XCircleIcon } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
-import { selectAvailableDevices, setPollInterval } from "./sni/sniSlice"
+import { selectAvailableDevices, setPollInterval, selectSA1ReadPossible } from "./sni/sniSlice"
 import { useGetDevicesQuery } from "./sni/sniApiSlice"
 import {
   setHistoryLenToShow,
@@ -48,6 +48,7 @@ function Header(props: any) {
   const coordsHistory = useAppSelector((state) => state.maps.coordsHistory)
   const zoomLevel = useAppSelector((state) => state.maps.zoomLevel)
   const pollingInterval = useAppSelector((state) => state.sni.pollInterval)
+  const sa1ReadPossible = useAppSelector(selectSA1ReadPossible)
   useGetDevicesQuery(
     { noConnect: false },
     { pollingInterval: 1000, skip: devices.length > 0 },
@@ -89,6 +90,7 @@ function Header(props: any) {
             onClick={handleCameraInfo}
             checked={cameraInfo}
             id="camera"
+            disabled={!sa1ReadPossible}
           />
           <Label
             htmlFor="camera"
@@ -102,6 +104,7 @@ function Header(props: any) {
             onClick={handleDebugInfo}
             checked={debugInfo}
             id="debug"
+            disabled={!sa1ReadPossible}
           />
           <Label
             htmlFor="debug"
