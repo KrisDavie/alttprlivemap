@@ -4,6 +4,8 @@ export interface MapSliceState {
   somariaPits: boolean
   cameraInfo: boolean
   debugInfo: boolean
+  spriteInfo: boolean
+  ancillaeInfo: boolean
   followPlayer: boolean
   curCoords: [number, number]
   coordsHistory: [number, number][]
@@ -18,6 +20,8 @@ const initialState: MapSliceState = {
   somariaPits: false,
   cameraInfo: false,
   debugInfo: false,
+  spriteInfo: false,
+  ancillaeInfo: false,
   followPlayer: true,
   curCoords: [0, 0],
   mapHistory: [],
@@ -40,6 +44,12 @@ export const mapSlice = createSlice({
     },
     toggleDebugInfo: (state) => {
       state.debugInfo = !state.debugInfo
+    },
+    toggleSpriteInfo: (state) => {
+      state.spriteInfo = !state.spriteInfo
+    },
+    toggleAncillaeInfo: (state) => {
+      state.ancillaeInfo = !state.ancillaeInfo
     },
     toggleFollowPlayer: (state) => {
       state.followPlayer = !state.followPlayer
@@ -68,6 +78,8 @@ export const mapSlice = createSlice({
 export const selectSomariaPits = (state: { maps: MapSliceState }) => state.maps.somariaPits
 export const selectCameraInfo = (state: { maps: MapSliceState }) => state.maps.cameraInfo
 export const selectDebugInfo = (state: { maps: MapSliceState }) => state.maps.debugInfo
+export const selectSpriteInfo = (state: { maps: MapSliceState }) => state.maps.spriteInfo
+export const selectAncillaeInfo = (state: { maps: MapSliceState }) => state.maps.ancillaeInfo
 export const selectCurCoords = (state: { maps: MapSliceState }) => state.maps.curCoords
 export const selectFollowPlayer = (state: { maps: MapSliceState }) => state.maps.followPlayer
 export const selectZoomLevel = (state: { maps: MapSliceState }) => state.maps.zoomLevel
@@ -98,6 +110,8 @@ export const {
   toggleSomariaPits,
   toggleCameraInfo,
   toggleDebugInfo,
+  toggleSpriteInfo,
+  toggleAncillaeInfo,
   toggleFollowPlayer,
   setCurCoords,
   setHistoryLenToShow,

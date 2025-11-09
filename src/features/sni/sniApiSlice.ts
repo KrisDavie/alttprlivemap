@@ -55,6 +55,10 @@ const memLocs: MemLocs = {
     'prachack': [0x0, 0x0],
     'rando': [0x180213, 0x1],
   },
+  'eg_map': {
+    'prachack': [0xF500A1, 0x1],
+    'rando': [0xF500A1, 0x1],
+  },
   'transition_bound_set': {
     'prachack': [0xF500A6, 0x2],
     'rando': [0xF500A6, 0x2],
@@ -78,6 +82,14 @@ const memLocs: MemLocs = {
   'sprite_coords': {
     'prachack': [0xF50D00, 0x40],
     'rando': [0xF50D00, 0x40],
+  },
+  'ancillae_ids': {
+    'prachack': [0xF50C4A, 0x10],
+    'rando': [0xF50C4A, 0x10],
+  },
+  'ancillae_coords': {
+    'prachack': [0xF50BFA, 0x40],
+    'rando': [0xF50BFA, 0x40],
   },
 
 }
@@ -224,16 +236,24 @@ export const sniApiSlice = createApi({
         const module = data['module'][0]
         const world = data['world'][0]
 
+        let egMap: 'EG1' | 'EG2' = 'EG1'
+
+        if (!state.sni.sa1ReadPossible && y > 8192) {
+          egMap = 'EG2'
+        } else {
+          egMap = data['eg_map'][0] === 0x1 ? 'EG2' : 'EG1'
+        }
+
         let curMap = state.maps.curMap
         if (!state.sni.raceOverride && completed_modes.includes(module)) {
           queryApi.dispatch(setRaceOverride(true))
         }
         if (ingame_modes.includes(module)) {
-          if (module === 0x07 && y <= 8192 && state.maps.curMap !== "EG1") {
+          if (module === 0x07 && egMap === 'EG1' && state.maps.curMap !== "EG1") {
             queryApi.dispatch(setCurMap("EG1"))
             curMap = "EG1"
           }
-          if (module === 0x07 && y > 8192) {
+          if (module === 0x07 && egMap === 'EG2') {
             y -= 8192
             if (state.maps.curMap !== "EG2") {
               queryApi.dispatch(setCurMap("EG2"))

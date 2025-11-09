@@ -13,6 +13,9 @@ import {
   selectDebugInfo,
 } from "./mapSlice"
 
+import { spriteIds } from "@/data/sprite_ids"
+import { ancillaeIds } from "@/data/ancillae_ids"
+
 interface MapContentProps {
   zoomToElement: (
     element: string,
@@ -92,15 +95,16 @@ function MapContent(props: MapContentProps) {
   let transitionBounds,
     transitionHeight,
     transitionWidth,
-    cameraPosX,
-    cameraPosY,
-    cameraBoundsN,
-    cameraBoundsE
+    cameraPosX = 0,
+    cameraPosY = 0
 
+  const spriteData: [string, number, number][] = []
+  const ancillaeData: [string, number, number][] = []
+
+  // UW
   if (selectedMap.startsWith("EG")) {
-    // NESW
+    // Bounds
     const transitionBoundLocs = [0x0, 0xc, 0x4, 0x8]
-
     if (allData && allData["transition_bounds"]) {
       const boundSet = [
         allData["transition_bound_set"][1], // V
@@ -151,6 +155,7 @@ function MapContent(props: MapContentProps) {
       }
     }
 
+    // Camera pos
     if (allData && allData["camera_pos_uw"]) {
       cameraPosX = new Uint16Array(
         new Uint8Array([
@@ -171,7 +176,9 @@ function MapContent(props: MapContentProps) {
         }
       }
     }
+    // OW
   } else {
+    // Bounds
     const transitionBoundLocs = [0x0, 0x16, 0x12, 0x4]
     transitionBounds = transitionBoundLocs.map((loc, index) => {
       const bound =
@@ -186,7 +193,7 @@ function MapContent(props: MapContentProps) {
     transitionHeight = transitionBounds[2] - transitionBounds[0]
     transitionWidth = transitionBounds[1] - transitionBounds[3]
 
-    // NESW
+    // Camera pos
     if (allData && allData["camera_pos_ow"]) {
       cameraPosY =
         (new Uint16Array(
@@ -208,6 +215,46 @@ function MapContent(props: MapContentProps) {
         2
     }
   }
+  // Sprites
+  if (allData && allData["sprite_ids"]) {
+    // Loop through sprite IDs with index
+    for (let i = 0; i < allData["sprite_ids"].length; i++) {
+      const spriteId = spriteIds[allData["sprite_ids"][i]]
+      const yPos = new Uint16Array(
+        new Uint8Array([
+          allData["sprite_coords"][i],
+          allData["sprite_coords"][0x20 + i],
+        ]).buffer,
+      )[0]
+      const xPos = new Uint16Array(
+        new Uint8Array([
+          allData["sprite_coords"][0x10 + i],
+          allData["sprite_coords"][0x30 + i],
+        ]).buffer,
+      )[0]
+      spriteData.push([spriteId, xPos, yPos])
+    }
+  }
+
+  if (allData && allData["ancillae_ids"]) {
+    // Loop through ancillae IDs with index
+    for (let i = 0; i < allData["ancillae_ids"].length; i++) {
+      const ancillaeId = ancillaeIds[allData["ancillae_ids"][i]]
+      const yPos = new Uint16Array(
+        new Uint8Array([
+          allData["ancillae_coords"][i],
+          allData["ancillae_coords"][0x14 + i],
+        ]).buffer,
+      )[0]
+      const xPos = new Uint16Array(
+        new Uint8Array([
+          allData["ancillae_coords"][0xa + i],
+          allData["ancillae_coords"][0x1e + i],
+        ]).buffer,
+      )[0]
+      ancillaeData.push([ancillaeId, xPos, yPos])
+    }
+  }
 
   const cameraStrokeWidth = 4
 
@@ -217,14 +264,22 @@ function MapContent(props: MapContentProps) {
         position: "relative",
       }}
     >
-      {/* Small square with camera and link coords as text */}
+      <MapImage
+        src={`${mapImage}.png`}
+        width={8192}
+        height={selectedMap === "EG2" ? 1536 : 8192}
+        mapImage={mapImage}
+        somariaPits={`${somariaPits}.png`}
+        selectedMap={selectedMap}
+        showSomariaPits={showSomariaPits}
+      />
       {showDebugInfo && (
         <div
           id="coordsText"
           style={{
             position: "absolute",
-            top: y + y_corr,
-            left: x + x_corr,
+            top: (y % 8192) + y_corr,
+            left: (x % 8192) + x_corr,
             backgroundColor: "rgba(0, 0, 0, 0.7)",
             padding: "5px",
             borderRadius: "5px",
@@ -240,7 +295,15 @@ function MapContent(props: MapContentProps) {
             .toString(16)
             .padStart(4, "0")}
           )<br />
-          Camera: ({cameraPosX}, {cameraPosY})<br />
+          Camera: (
+          {(cameraPosX / (selectedMap.startsWith("EG") ? 1 : 2))
+            .toString(16)
+            .padStart(4, "0")}
+          ,{" "}
+          {(cameraPosY / (selectedMap.startsWith("EG") ? 1 : 2))
+            .toString(16)
+            .padStart(4, "0")}
+          )<br />
           BoundSet H:{" "}
           {allData &&
             allData["transition_bound_set"] &&
@@ -267,42 +330,33 @@ function MapContent(props: MapContentProps) {
           {transitionBounds &&
             `${transitionBounds[3]} (${allData["transition_bound_set"][0]})`}
           <br />
-          {"E<->W:"}{" "}
-          {Math.abs(
-            transitionBounds ? transitionBounds[3] - transitionBounds[1] : 0,
-          )}
-          <br />
-          {"N<->S:"}{" "}
-          {Math.abs(
-            transitionBounds ? transitionBounds[0] - transitionBounds[2] : 0,
-          )}
-          <br />
         </div>
       )}
-      <MapImage
-        src={`${mapImage}.png`}
-        width={8192}
-        height={selectedMap === "EG2" ? 1536 : 8192}
-        mapImage={mapImage}
-        somariaPits={`${somariaPits}.png`}
-        selectedMap={selectedMap}
-        showSomariaPits={showSomariaPits}
-      />
-      {/* Show current coords as an X */}
+      {/* Show current coords as a circle */}
       {curCoords && (
-        <div
-          id="playerDot"
+        <svg
+          id="playerDotSvg"
           style={{
             position: "absolute",
-            left: x + x_corr,
-            top: y + y_corr,
-            width: 10,
-            height: 10,
-            backgroundColor: "red",
-            borderRadius: "50%",
+            left: 0,
+            top: 0,
+            width: "100%",
+            height: "100%",
+            pointerEvents: "none",
             zIndex: 10000,
           }}
-        ></div>
+        >
+          <circle
+            id="playerDot"
+            cx={(x % 8192) + x_corr}
+            cy={(y % 8192) + y_corr}
+            r={6}
+            fill="red"
+            strokeDasharray={Math.max(x, y) < 8192 ? "0" : "2,2"}
+            stroke="black"
+            strokeWidth={2}
+          />
+        </svg>
       )}
       {coordsSets.length > 0 && (
         <svg
@@ -365,8 +419,8 @@ function MapContent(props: MapContentProps) {
           >
             {/* nesw */}
             <rect
-              x={cameraPosX - cameraStrokeWidth / 2}
-              y={cameraPosY - cameraStrokeWidth / 2}
+              x={(cameraPosX % 8192) - cameraStrokeWidth / 2}
+              y={(cameraPosY % 8192) - cameraStrokeWidth / 2}
               height={
                 224 * (selectedMap.startsWith("EG") ? 1 : 2) + cameraStrokeWidth
               }
@@ -374,6 +428,9 @@ function MapContent(props: MapContentProps) {
                 256 * (selectedMap.startsWith("EG") ? 1 : 2) + cameraStrokeWidth
               }
               stroke="red"
+              strokeDasharray={
+                Math.max(cameraPosX, cameraPosY) < 8192 ? "0" : "10,5"
+              }
               strokeWidth={cameraStrokeWidth}
               fill="none"
             />
@@ -395,14 +452,113 @@ function MapContent(props: MapContentProps) {
         >
           {/* nesw */}
           <rect
-            y={transitionBounds[0]}
-            x={transitionBounds[3]}
+            y={transitionBounds[0] % 8192}
+            x={transitionBounds[3] % 8192}
             height={transitionHeight}
             width={transitionWidth}
             stroke="blue"
+            strokeDasharray={
+              Math.max(transitionBounds[0], transitionBounds[3]) < 8192
+                ? "0"
+                : "10,5"
+            }
             strokeWidth={5}
             fill="none"
           />
+        </svg>
+      )}
+      {spriteData.length > 0 && (
+        <svg
+          id="spriteSvg"
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: "100%",
+            height: "100%",
+            pointerEvents: "none",
+            zIndex: 97,
+          }}
+        >
+          {spriteData.map((sprite, index) => {
+            const spriteX = selectedMap.startsWith("EG")
+              ? sprite[1]
+              : sprite[1] * 2
+            const spriteY = selectedMap.startsWith("EG")
+              ? sprite[2]
+              : sprite[2] * 2
+            return (
+              <g key={index}>
+                <circle
+                  cx={spriteX + x_corr}
+                  cy={spriteY + y_corr}
+                  r={6}
+                  fill="yellow"
+                  stroke="black"
+                  strokeWidth={2}
+                />
+                <text
+                  x={spriteX + x_corr}
+                  y={spriteY + y_corr - 10}
+                  fill="white"
+                  fontSize="16"
+                  textAnchor="middle"
+                >
+                  {`${index.toString().padStart(2, "0")}: ${sprite[0]}`}
+                </text>
+              </g>
+            )
+          })}
+        </svg>
+      )}
+      {ancillaeData.length > 0 && (
+        <svg
+          id="ancillaeSvg"
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: "100%",
+            height: "100%",
+            pointerEvents: "none",
+            zIndex: 96,
+          }}
+        >
+          {ancillaeData.map((ancillae, index) => {
+            const ancillaeX = selectedMap.startsWith("EG")
+              ? ancillae[1]
+              : ancillae[1] * 2
+            const ancillaeY = selectedMap.startsWith("EG")
+              ? ancillae[2]
+              : ancillae[2] * 2
+            if (ancillae[0] === "Nothing") {
+              return null
+            }
+            return (
+              <g key={index}>
+                <circle
+                  cx={(ancillaeX % 8192) + x_corr}
+                  cy={(ancillaeY % 8192) + y_corr}
+                  r={6}
+                  fill="blue"
+                  stroke="black"
+                  strokeDasharray={
+                    Math.max(ancillaeX, ancillaeY) < 8192 ? "0" : "2,2"
+                  }
+                  strokeWidth={2}
+                />
+                <text
+                  x={(ancillaeX % 8192) + x_corr}
+                  y={(ancillaeY % 8192) + y_corr - 10}
+                  fill="white"
+                  fontSize="16"
+                  textAnchor="middle"
+                >
+                  {`${index.toString().padStart(2, "0")}: ${ancillae[0]}`}
+                </text>
+              </g>
+            )
+          })}
         </svg>
       )}
     </div>

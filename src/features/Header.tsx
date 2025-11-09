@@ -5,8 +5,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import SniSettings from "./sni/sniSettings"
-import { AlertCircleIcon, CheckIcon, HomeIcon, XCircleIcon } from "lucide-react"
+import { AlertCircleIcon, CheckIcon, HomeIcon, XCircleIcon, ChevronDownIcon } from "lucide-react"
 import { useAppDispatch, useAppSelector } from "@/app/hooks"
 import { selectAvailableDevices, setPollInterval, selectSA1ReadPossible } from "./sni/sniSlice"
 import { useGetDevicesQuery } from "./sni/sniApiSlice"
@@ -16,7 +24,9 @@ import {
   toggleFollowPlayer,
   toggleSomariaPits,
   toggleCameraInfo,
-  toggleDebugInfo
+  toggleDebugInfo,
+  toggleSpriteInfo,
+  toggleAncillaeInfo
 } from "./map/mapSlice"
 import {
   Tooltip,
@@ -41,6 +51,8 @@ function Header(props: any) {
   const somariaPits = useAppSelector((state) => state.maps.somariaPits)
   const cameraInfo = useAppSelector((state) => state.maps.cameraInfo)
   const debugInfo = useAppSelector((state) => state.maps.debugInfo)
+  const spriteInfo = useAppSelector((state) => state.maps.spriteInfo)
+  const ancillaeInfo = useAppSelector((state) => state.maps.ancillaeInfo)
   const followPlayer = useAppSelector((state) => state.maps.followPlayer)
   const historyLengthToShow = useAppSelector(
     (state) => state.maps.historyLenToShow,
@@ -66,6 +78,14 @@ function Header(props: any) {
     dispatch(toggleDebugInfo())
   }
 
+  const handleSpriteInfo = () => {
+    dispatch(toggleSpriteInfo())
+  }
+
+  const handleAncillaeInfo = () => {
+    dispatch(toggleAncillaeInfo())
+  }
+
   const handleFollowPlayer = () => {
     dispatch(toggleFollowPlayer())
   }
@@ -84,35 +104,53 @@ function Header(props: any) {
 
   return (
     <div className="flex flex-col h-12 items-center">
-      <div className="flex absolute top-4 left-2 space-x-2 justify-between">
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            onClick={handleCameraInfo}
-            checked={cameraInfo}
-            id="camera"
-            disabled={!sa1ReadPossible}
-          />
-          <Label
-            htmlFor="camera"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+      <div className="flex absolute top-2 left-2 space-x-2 items-center">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8">
+              Extras <ChevronDownIcon className="ml-2 h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="start"
+            onCloseAutoFocus={(e) => e.preventDefault()}
           >
-            Camera
-          </Label>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            onClick={handleDebugInfo}
-            checked={debugInfo}
-            id="debug"
-            disabled={!sa1ReadPossible}
-          />
-          <Label
-            htmlFor="debug"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-          >
-            Debug
-          </Label>
-        </div>
+            <DropdownMenuLabel>Display Options</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuCheckboxItem
+              checked={cameraInfo}
+              onCheckedChange={handleCameraInfo}
+              disabled={!sa1ReadPossible}
+              onSelect={(e) => e.preventDefault()}
+            >
+              Camera
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={spriteInfo}
+              onCheckedChange={handleSpriteInfo}
+              disabled={!sa1ReadPossible}
+              onSelect={(e) => e.preventDefault()}
+            >
+              Sprites
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={ancillaeInfo}
+              onCheckedChange={handleAncillaeInfo}
+              disabled={!sa1ReadPossible}
+              onSelect={(e) => e.preventDefault()}
+            >
+              Ancillae
+            </DropdownMenuCheckboxItem>
+            <DropdownMenuCheckboxItem
+              checked={debugInfo}
+              onCheckedChange={handleDebugInfo}
+              disabled={!sa1ReadPossible}
+              onSelect={(e) => e.preventDefault()}
+            >
+              Debug
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <div className="flex items-center space-x-2">
           <Checkbox
             onClick={handleSomariaPits}
@@ -189,7 +227,7 @@ function Header(props: any) {
             >Poll Interval (ms)</Label>
             </div>
       </div>
-      <div className="flex absolute top-1 right-2">
+      <div className="flex absolute top-2 right-2 items-center">
         <Popover>
           <PopoverTrigger>
             <TooltipProvider>
