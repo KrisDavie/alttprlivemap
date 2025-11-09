@@ -11,6 +11,8 @@ import {
   selectCurMap,
   selectCameraInfo,
   selectDebugInfo,
+  selectSpriteInfo,
+  selectAncillaeInfo,
 } from "./mapSlice"
 
 import { spriteIds } from "@/data/sprite_ids"
@@ -30,6 +32,8 @@ function MapContent(props: MapContentProps) {
   const showSomariaPits = useAppSelector(selectSomariaPits)
   const showCameraInfo = useAppSelector(selectCameraInfo)
   const showDebugInfo = useAppSelector(selectDebugInfo)
+  const showSpriteData = useAppSelector(selectSpriteInfo)
+  const showAncillaeData = useAppSelector(selectAncillaeInfo)
   const curCoords = useAppSelector(selectCurCoords)
   let coordsHistory = useAppSelector(selectCoordsHistory)
   const mapHistory = useAppSelector(selectMapHistory)
@@ -332,7 +336,6 @@ function MapContent(props: MapContentProps) {
           <br />
         </div>
       )}
-      {/* Show current coords as a circle */}
       {curCoords && (
         <svg
           id="playerDotSvg"
@@ -467,7 +470,7 @@ function MapContent(props: MapContentProps) {
           />
         </svg>
       )}
-      {spriteData.length > 0 && (
+      {showSpriteData && spriteData.length > 0 && (
         <svg
           id="spriteSvg"
           style={{
@@ -511,7 +514,7 @@ function MapContent(props: MapContentProps) {
           })}
         </svg>
       )}
-      {ancillaeData.length > 0 && (
+      {showAncillaeData && ancillaeData.length > 0 && (
         <svg
           id="ancillaeSvg"
           style={{
